@@ -13,7 +13,7 @@ namespace Generics
 
         void Start()
         {
-            gameObjects.Add();
+           // gameObjects.Add();
         }
     }
 }
