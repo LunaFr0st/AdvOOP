@@ -17,9 +17,11 @@ public class Movement : MonoBehaviour
     public float jumpSpeed = 2.0F;
     public float gravity = 10.0F;
     public int maxJump = 2;
+    public float maxVelocity = 6f;
 
     private Vector3 moveDirection = Vector3.zero;
     private int currentJump = 0;
+    public bool isClimbingLadder = false;
 
     SpriteRenderer rend;
     Animator anim;
@@ -33,28 +35,8 @@ public class Movement : MonoBehaviour
 
     void Update()
     {
-        /*float hori = Input.GetAxis("Horizontal");
-        if (hori < 0)
-        {
-            rend.flipX = true;
-            anim.SetBool("isRunning", true);
-        }
-        else if (hori > 0)
-        {
-            rend.flipX = false;
-            anim.SetBool("isRunning", true);
-        }
-        else
-            anim.SetBool("isRunning", false);
-        rigi.AddForce(new Vector2(hori * speed * Time.deltaTime, 0), ForceMode2D.Impulse);
-        */
         MoveChar();
-        if (Input.GetKeyDown(KeyCode.Space) && currentJump <= maxJump)
-        {
-            currentJump++;
-            anim.Play("Jump");
-            rigi.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
-        }
+        
         moveDirection.y -= gravity * Time.deltaTime;
 
     }
@@ -82,6 +64,39 @@ public class Movement : MonoBehaviour
         else
             anim.SetBool("isRunning", false);
 
-        transform.position += (new Vector3(hori * speed * Time.deltaTime, 0, 0));
+        //  transform.position += (new Vector3(hori * speed * Time.deltaTime, 0, 0));
+        
+        rigi.AddForce(new Vector2(hori * speed * Time.deltaTime, 0), ForceMode2D.Impulse);
+        if(rigi.velocity.x >= maxVelocity)
+        {
+            rigi.velocity = new Vector2(maxVelocity, 0);
+        }
+        
+        if (!isClimbingLadder)
+        {
+            if (Input.GetKeyDown(KeyCode.Space) && currentJump <= maxJump)
+            {
+                currentJump++;
+                anim.Play("Jump");
+                rigi.velocity = Vector2.zero;
+                rigi.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
+            }
+        }
+        
+        if (isClimbingLadder)
+        {
+            float vert = Input.GetAxis("Vertical");
+            if (vert < 0)
+            {
+                anim.SetBool("isClimbing", true);
+            }
+            else if (vert > 0)
+            {
+                rend.flipX = false;
+                anim.SetBool("isRunning", true);
+            }
+            else
+                anim.SetBool("isRunning", false);
+        }
     }
 }
