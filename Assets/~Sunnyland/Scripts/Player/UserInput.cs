@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SunnyLand.Player
+namespace SunnyLand
 {
     public class UserInput : MonoBehaviour
     {

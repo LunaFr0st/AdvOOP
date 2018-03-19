@@ -2,21 +2,24 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SunnyLand.Player
+namespace SunnyLand
 {
     public class PlayerAnim : MonoBehaviour
     {
-
-        // Use this for initialization
+        private PlayerController player;
+        private Animator anim;
         void Start()
         {
-
+            anim = GetComponent<Animator>();
+            player = GetComponent<PlayerController>();
+            player.onGroundedChanged += OnGroundedChanged;
         }
-
-        // Update is called once per frame
-        void Update()
+        void OnGroundedChanged(bool isGrounded)
         {
-
+            if (isGrounded)
+                Debug.Log("grounded");
+            else
+                Debug.Log("notGrounded");
         }
     }
 }
