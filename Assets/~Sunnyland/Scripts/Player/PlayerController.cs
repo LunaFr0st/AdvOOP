@@ -59,7 +59,8 @@ namespace SunnyLand
 
         void Update()
         {
-            moveDirection.y += Physics.gravity.y * Time.deltaTime;
+            PerformJump();
+            PerformMove();
         }
 
         void FixedUpdate()
@@ -119,28 +120,69 @@ namespace SunnyLand
             // Create a ray going down
             Ray groundRay = new Ray(transform.position, Vector3.down);
             // Set Hit to 2D Raycast
-            RaycastHit2D[] hits = Physics2D.RaycastAll(groundRay.origin, groundRay.origin + groundRay.direction, rayDist);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(groundRay.origin, groundRay.direction, rayDist);
             // If hit collider is not null
             foreach (var hit in hits)
             {
+                if (Mathf.Abs(hit.normal.x) > 0.1f)
+                    rigi.gravityScale = 0;
+                else
+                    rigi.gravityScale = 1;
+
+
                 if (CheckGround(hit))
                     break;
             }
             if (wasGrounded != isGrounded && onGroundedChanged != null)
-            {
                 onGroundedChanged.Invoke(isGrounded);
-            }
         }
 
         void LimitVelocity()
         {
             // If Rigid's velocity (magnitude) is greater than maxVelocity
-            if (rigi.velocity.magnitude >= maxVelocity)
+            if (rigi.velocity.magnitude > maxVelocity)
             {
                 // Set Rigid velocity to velocity normalized x maxVelocity
                 rigi.velocity = rigi.velocity.normalized * maxVelocity;
             }
 
+        }
+
+        void EnablePhysics()
+        {
+            rigi.simulated = true;
+            rigi.gravityScale = 1;
+        }
+        void DisablePhysics()
+        {
+            rigi.simulated = false;
+            rigi.gravityScale = 0;
+        }
+
+        void PerformMove()
+        {
+            if (isOnSlope &&
+                _horizontal == 0 &&
+                isGrounded)
+            {
+                rigi.velocity = Vector3.zero;
+            }
+            Vector3 right = Vector3.Cross(groundNormal, Vector3.back);
+            rigi.AddForce(right * _horizontal * speed);
+            LimitVelocity();
+        }
+
+        void PerformJump()
+        {
+            if (isJumping)
+            {
+                if (currentJump < maxJumpCount)
+                {
+                    currentJump++;
+                    rigi.AddForce(Vector2.up * jumpHeight, ForceMode2D.Impulse);
+                }
+                isJumping = false;
+            }
         }
 
         public void Climb()
@@ -150,36 +192,24 @@ namespace SunnyLand
 
         public void Jump()
         {
-            // If currentJump is less than max jump
-            if (currentJump < maxJumpCount + 1)
-            {
-                // Increment currentJump
-                currentJump++;
-                // Add force to player (using Impulse)
-                rigi.AddForce(Vector2.up * jumpHeight, ForceMode2D.Impulse);
-            }
+            isJumping = true;
 
+            // invoke event
+            Invoke("PerformJump", 1);
         }
 
         public void Move(float horizontal)
         {
+            _horizontal = horizontal;
             // If horizontal > 0
-            if (horizontal > 0)
+            if (horizontal != 0)
             {
                 // Flip Character
-                rend.flipX = false;
-            }
-            // If horizontal < 0
-            if (horizontal < 0)
-            {
-                // Flip Character
-                rend.flipX = true;
+                rend.flipX = horizontal < 0;
             }
 
-            // Add force to player in the right direction
-            rigi.AddForce(Vector2.right * horizontal * speed);
-            // Limit Velocity
-            LimitVelocity();
+            // invoke event
+            Invoke("PerformMove", 1);
         }
     }
 }
