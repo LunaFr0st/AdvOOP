@@ -9,6 +9,11 @@ namespace SunnyLand
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
     {
+        #region Variables
+        [Header("Health and Damage")]
+        public int health = 100;
+        public int damage = 50;
+        [Header("Movement")]
         public float speed = 5f;
         public float maxVelocity = 2f;
         [Header("Grounding")]
@@ -36,6 +41,8 @@ namespace SunnyLand
         private SpriteRenderer rend;
         private Animator anim;
         private Rigidbody2D rigi;
+        public Collider2D defaultCollider;
+        public Collider2D crouchCollider;
 
         [Header("Delegates")]
         public EventCallback onJump;
@@ -48,8 +55,8 @@ namespace SunnyLand
         public FloatCallback onClimb;
 
         private float _vertical, _horizontal;
-
-
+        #endregion
+        #region Unity Functions
         void Start()
         {
             rend = GetComponent<SpriteRenderer>();
@@ -72,8 +79,14 @@ namespace SunnyLand
         {
             Ray groundRay = new Ray(transform.position, Vector3.down);
             Gizmos.DrawLine(groundRay.origin, groundRay.origin + groundRay.direction * rayDist);
-        }
 
+            Vector3 right = Vector3.Cross(groundNormal, Vector3.forward);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(transform.position - right, transform.position + right);
+        }
+        #endregion
+        #region Custom Functions
+        #region Detection
         bool CheckSlope(RaycastHit2D hit)
         {
             float slopeAngle = Vector3.Angle(Vector3.up, hit.normal);
@@ -137,6 +150,11 @@ namespace SunnyLand
                 onGroundedChanged.Invoke(isGrounded);
         }
 
+        void DetectClimable()
+        {
+
+        }
+
         void LimitVelocity()
         {
             // If Rigid's velocity (magnitude) is greater than maxVelocity
@@ -157,6 +175,16 @@ namespace SunnyLand
         {
             rigi.simulated = false;
             rigi.gravityScale = 0;
+        }
+        void UpdateCollider()
+        {
+
+        }
+        #endregion
+        #region Movement
+        void PerformClimb()
+        {
+
         }
 
         void PerformMove()
@@ -185,7 +213,7 @@ namespace SunnyLand
             }
         }
 
-        public void Climb()
+        public void Climb(float vertical)
         {
             // CHALLENGE
         }
@@ -195,7 +223,8 @@ namespace SunnyLand
             isJumping = true;
 
             // invoke event
-            Invoke("PerformJump", 1);
+            if (onJump != null)
+                onJump.Invoke();
         }
 
         public void Move(float horizontal)
@@ -209,7 +238,39 @@ namespace SunnyLand
             }
 
             // invoke event
-            Invoke("PerformMove", 1);
+            if(onMove != null)
+                onMove.Invoke(horizontal);
         }
+
+        public void Crouch()
+        {
+            isCrouching = true;
+            if(onCrouchChanged != null)
+            {
+                onCrouchChanged.Invoke(isCrouching);
+            }
+        }
+        public void UnCrouch()
+        {
+            isCrouching = false;
+            if (onCrouchChanged != null)
+            {
+                onCrouchChanged.Invoke(isCrouching);
+            }
+        }
+        public void Hurt(int damage, Vector2? hitNormal = null)
+        {
+            Vector2 force = Vector2.up;
+            if (hitNormal != null)
+            {
+                force = hitNormal.Value;
+            }
+            health -= damage;
+            rigi.AddForce(force * damage /* (damage / reducer)*/, ForceMode2D.Impulse);
+            if (onHurt != null)
+                onHurt.Invoke();
+        }
+        #endregion
     }
+    #endregion
 }
