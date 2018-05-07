@@ -43,6 +43,8 @@ namespace SunnyLand
         private Rigidbody2D rigi;
         public Collider2D defaultCollider;
         public Collider2D crouchCollider;
+        public Collider2D currentCollider;
+        public Climbable climbObject;
 
         [Header("Delegates")]
         public EventCallback onJump;
@@ -53,7 +55,7 @@ namespace SunnyLand
         public BoolCallback onSlopeChanged;
         public FloatCallback onMove;
         public FloatCallback onClimb;
-
+        
         private float _vertical, _horizontal;
         #endregion
         #region Unity Functions
@@ -66,13 +68,16 @@ namespace SunnyLand
 
         void Update()
         {
+            PerformClimb();
             PerformJump();
             PerformMove();
         }
 
         void FixedUpdate()
         {
+            UpdateCollider();
             DetectGround();
+            DetectClimbable();
         }
 
         void OnDrawGizmos()
@@ -150,9 +155,21 @@ namespace SunnyLand
                 onGroundedChanged.Invoke(isGrounded);
         }
 
-        void DetectClimable()
+        void DetectClimbable()
         {
+            if (isClimbing) return;
+            Collider2D[] hits = Physics2D.OverlapBoxAll(transform.position, currentCollider.bounds.size, 0);
 
+            foreach(var hit in hits)
+            {
+                if(hit !=null && hit.isTrigger)
+                {
+                    climbObject = hit.GetComponent<Climbable>();
+                    return;
+                }
+            }
+
+            climbObject = null;
         }
 
         void LimitVelocity()
@@ -178,13 +195,52 @@ namespace SunnyLand
         }
         void UpdateCollider()
         {
-
+            if (isCrouching)
+            {
+                defaultCollider.enabled = false;
+                currentCollider = crouchCollider;
+            }
+            else
+            {
+                crouchCollider.enabled = false;
+                currentCollider = defaultCollider;
+            }
+            currentCollider.enabled = true;
         }
         #endregion
         #region Movement
         void PerformClimb()
         {
+            if(_vertical != 0 && climbObject != null)
+            {
+                bool isAtTop = climbObject.isAtTop(transform.position);
+                bool isAtBottom = climbObject.isAtBottom(transform.position);
+                bool isAtTopAndPressingUp = isAtTop && _vertical > 0;
+                bool isAtBottomAndPressingDown = isAtBottom && _vertical < 0;
 
+                if(!isAtTopAndPressingUp && !isAtBottomAndPressingDown && !isClimbing)
+                {
+                    isClimbing = true;
+                    if(onClimbChanged != null)
+                    {
+                        onClimbChanged.Invoke(isClimbing);
+                    }
+                }
+                if(isAtTopAndPressingUp || isAtBottomAndPressingDown)
+                {
+                    StopClimbing();
+                }
+            }
+            if(isClimbing && climbObject != null)
+            {
+                DisablePhysics();
+                float x = climbObject.GetX();
+                Vector3 position = transform.position;
+                position.x = x;
+                position.y += _vertical * climbSpeed * Time.deltaTime;
+                transform.position = position;
+
+            }
         }
 
         void PerformMove()
@@ -213,9 +269,24 @@ namespace SunnyLand
             }
         }
 
+        void StopClimbing()
+        {
+            climbObject = null;
+            isClimbing = false;
+            if(onClimbChanged != null)
+            {
+                onClimbChanged.Invoke(isClimbing);
+            }
+            EnablePhysics();
+        }
+
         public void Climb(float vertical)
         {
-            // CHALLENGE
+            _vertical = vertical;
+            if(onClimb != null)
+            {
+                onClimb.Invoke(vertical);
+            }
         }
 
         public void Jump()
